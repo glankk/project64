@@ -321,6 +321,9 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
     AddHandler(RomList_7zipCache, new CSettingTypeApplicationPath("Settings", "7zipCache", RomList_7zipCacheDefault));
     AddHandler(RomList_7zipCacheDefault, new CSettingTypeRelativePath("Config", "Project64.zcache"));
 
+    AddHandler(SDCard_Enable, new CSettingTypeApplication("Settings", "SD Card Enabled", (uint32_t)false));
+    AddHandler(SDCard_Path, new CSettingTypeApplicationPath("Settings", "SD Card Path", Default_None));
+
     AddHandler(GameRunning_LoadingInProgress, new CSettingTypeTempBool(false));
     AddHandler(GameRunning_CPU_Running, new CSettingTypeTempBool(false));
     AddHandler(GameRunning_CPU_Paused, new CSettingTypeTempBool(false));

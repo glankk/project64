@@ -36,6 +36,8 @@ m_SettingsConfig(SettingsConfig)
     AddModCheckBox(GetDlgItem(IDC_SCREEN_SAVER), Setting_DisableScrSaver);
 	AddModCheckBox(GetDlgItem(IDC_DISCORD_RPC), Setting_EnableDiscordRPC);
     AddModCheckBox(GetDlgItem(IDC_BASIC_MODE), UserInterface_BasicMode);
+    AddModCheckBox(GetDlgItem(IDC_ENABLESD), SDCard_Enable);
+    m_SDPath.Attach(GetDlgItem(IDC_SDPATH));
 
     CModifiedEditBox * TxtBox = AddModTextBox(GetDlgItem(IDC_REMEMBER), File_RecentGameFileCount, false);
     TxtBox->SetTextField(GetDlgItem(IDC_MAXROMS_TXT));
@@ -58,6 +60,16 @@ void CGeneralOptionsPage::ShowPage()
 
 void CGeneralOptionsPage::ApplySettings(bool UpdateScreen)
 {
+    if (m_SDPath.IsChanged())
+    {
+        stdstr file = m_SDPath.GetWindowText();
+        g_Settings->SaveString(SDCard_Path, file.c_str());
+    }
+    if (m_SDPath.IsReset())
+    {
+        g_Settings->DeleteSetting(SDCard_Path);
+    }
+
     CSettingsPageImpl<CGeneralOptionsPage>::ApplySettings(UpdateScreen);
 }
 
@@ -77,4 +89,36 @@ void CGeneralOptionsPage::OnBasicMode(UINT Code, int id, HWND ctl)
 {
     CheckBoxChanged(Code, id, ctl);
     m_SettingsConfig->UpdateAdvanced((int)::SendMessage(ctl, BM_GETCHECK, 0, 0) == 0);
+}
+
+void CGeneralOptionsPage::SelectSDPath(UINT /*Code*/, int /*id*/, HWND /*ctl*/)
+{
+    const char* Filter = "Raw Disk Image (*.img, *.raw, *.bin)\0*.img;*.raw;*.bin;\0All files (*)\0*\0";
+
+    CPath FileName;
+    if (FileName.SelectFile(m_hWnd, g_Settings->LoadStringVal(Cmd_BaseDirectory).c_str(), Filter, true))
+    {
+        m_SDPath.SetChanged(true);
+        m_SDPath.SetWindowText(((stdstr)(std::string)FileName).ToUTF16().c_str());
+        SendMessage(GetParent(), PSM_CHANGED, (WPARAM)m_hWnd, 0);
+    }
+}
+
+void CGeneralOptionsPage::SDPathChanged(UINT /*Code*/, int /*id*/, HWND /*ctl*/)
+{
+    if (m_InUpdateSettings) { return; }
+    m_SDPath.SetChanged(true);
+    SendMessage(GetParent(), PSM_CHANGED, (WPARAM)m_hWnd, 0);
+}
+
+void CGeneralOptionsPage::UpdatePageSettings(void)
+{
+    m_InUpdateSettings = true;
+    CSettingsPageImpl<CGeneralOptionsPage>::UpdatePageSettings();
+
+    stdstr File;
+    g_Settings->LoadStringVal(SDCard_Path, File);
+    m_SDPath.SetWindowText(File.ToUTF16().c_str());
+
+    m_InUpdateSettings = false;
 }

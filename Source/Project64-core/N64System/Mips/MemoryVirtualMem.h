@@ -151,6 +151,7 @@ private:
     static void Load32CartridgeDomain1Address3(void);
     static void Load32CartridgeDomain2Address1(void);
     static void Load32CartridgeDomain2Address2(void);
+    static void Load32Homeboy(void);
     static void Load32PifRam(void);
     static void Load32Rom(void);
 
@@ -165,6 +166,7 @@ private:
     static void Write32SerialInterface(void);
     static void Write32CartridgeDomain2Address1(void);
     static void Write32CartridgeDomain2Address2(void);
+    static void Write32Homeboy(void);
     static void Write32PifRam(void);
 
 #if defined(__i386__) || defined(_M_IX86)
@@ -220,6 +222,11 @@ private:
     //BIG look up table to quickly translate the tlb to real mem address
     size_t * m_TLB_ReadMap;
     size_t * m_TLB_WriteMap;
+
+    uint32_t m_hb_dram_addr;
+    uint32_t m_hb_n_blocks;
+    uint32_t m_hb_status;
+    FILE *   m_hb_file;
 
     static uint32_t m_MemLookupAddress;
     static MIPS_DWORD m_MemLookupValue;

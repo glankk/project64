@@ -21,6 +21,8 @@ protected:
     inline static bool bShowCPUPer(void) { return m_bShowCPUPer; }
     inline static bool bShowDListAListCount(void) { return m_bShowDListAListCount; }
     inline static bool bLimitFPS(void) { return m_bLimitFPS; }
+    inline static bool bSDEnable(void) { return m_bSDEnable; }
+    inline static const std::string &sSDPath(void) { return m_sSDPath; }
 
 private:
     static void RefreshSettings(void *);
@@ -30,6 +32,8 @@ private:
     static bool m_bLimitFPS;
     static bool m_bShowDListAListCount;
     static bool m_bDisplayFrameRate;
+    static bool m_bSDEnable;
+    static std::string m_sSDPath;
 
     static int32_t     m_RefCount;
 };

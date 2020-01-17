@@ -51,7 +51,11 @@ CMipsMemoryVM::CMipsMemoryVM(bool SavesReadOnly) :
     m_IMEM(NULL),
     m_DDRomMapped(false),
     m_DDRom(NULL),
-    m_DDRomSize(0)
+    m_DDRomSize(0),
+    m_hb_dram_addr(0),
+    m_hb_n_blocks(0),
+    m_hb_status(0),
+    m_hb_file(NULL)
 {
     g_Settings->RegisterChangeCB(Game_RDRamSize, this, (CSettings::SettingChangedFunc)RdramChanged);
 }
@@ -75,6 +79,8 @@ uint32_t swap32by8(uint32_t word)
 
 CMipsMemoryVM::~CMipsMemoryVM()
 {
+    if (m_hb_file)
+        fclose(m_hb_file);
     g_Settings->UnregisterChangeCB(Game_RDRamSize, this, (CSettings::SettingChangedFunc)RdramChanged);
     FreeMemory();
 }
@@ -711,7 +717,12 @@ bool CMipsMemoryVM::LW_NonMemory(uint32_t PAddr, uint32_t* Value)
         case 0x04800000: Load32SerialInterface(); break;
         case 0x05000000: Load32CartridgeDomain2Address1(); break;
         case 0x06000000: Load32CartridgeDomain1Address1(); break;
-        case 0x08000000: Load32CartridgeDomain2Address2(); break;
+        case 0x08000000:
+          if ((PAddr & 0xFFFF0000) == 0x08050000)
+            Load32Homeboy();
+          else
+            Load32CartridgeDomain2Address2();
+          break;
         case 0x1FC00000: Load32PifRam(); break;
         case 0x1FF00000: Load32CartridgeDomain1Address3(); break;
         default:
@@ -874,7 +885,12 @@ bool CMipsMemoryVM::SW_NonMemory(uint32_t PAddr, uint32_t Value)
     case 0x04700000: Write32RDRAMInterface(); break;
     case 0x04800000: Write32SerialInterface(); break;
     case 0x05000000: Write32CartridgeDomain2Address1(); break;
-    case 0x08000000: Write32CartridgeDomain2Address2(); break;
+    case 0x08000000:
+      if ((PAddr & 0xFFFF0000) == 0x08050000)
+        Write32Homeboy();
+      else
+        Write32CartridgeDomain2Address2();
+      break;
     case 0x1FC00000: Write32PifRam(); break;
     default:
         return false;
@@ -1536,6 +1552,19 @@ void CMipsMemoryVM::Load32CartridgeDomain2Address2(void)
     else
     {
         m_MemLookupValue.UW[0] = g_MMU->ReadFromFlashStatus(m_MemLookupAddress & 0x1FFFFFFF);
+    }
+}
+
+void CMipsMemoryVM::Load32Homeboy(void)
+{
+    switch ((m_MemLookupAddress & 0x0000FFFF))
+    {
+    case 0x0000:
+    {
+        m_MemLookupValue.UDW = 0x1234;
+        break;
+    }
+    case 0x0014: m_MemLookupValue.UDW = g_MMU->m_hb_status; break;
     }
 }
 
@@ -2211,6 +2240,86 @@ void CMipsMemoryVM::Write32CartridgeDomain2Address2(void)
     if (g_System->m_SaveUsing == SaveChip_FlashRam)
     {
         g_MMU->WriteToFlashCommand(m_MemLookupValue.UW[0]);
+    }
+}
+
+void CMipsMemoryVM::Write32Homeboy(void)
+{
+    switch ((m_MemLookupAddress & 0x0000FFFF))
+    {
+    case 0x0004: g_MMU->m_hb_dram_addr = m_MemLookupValue.UW[0]; break;
+    case 0x0008:
+    {
+        uint32_t lba = m_MemLookupValue.UW[0];
+        uint32_t size = g_MMU->m_hb_n_blocks * 512;
+        g_MMU->m_hb_status &= ~(0b1111 << 5);
+        if (!g_MMU->m_hb_file ||
+            g_MMU->m_hb_dram_addr >= g_MMU->RdramSize() ||
+            g_MMU->m_hb_dram_addr + size > g_MMU->RdramSize())
+        {
+            g_MMU->m_hb_status |= (1 << 5);
+            return;
+        }
+        uint32_t * src = (uint32_t *)(g_MMU->Rdram() + g_MMU->m_hb_dram_addr);
+        uint32_t * buf = (uint32_t *)malloc(size);
+        if (!buf)
+        {
+            g_MMU->m_hb_status |= (3 << 5);
+            return;
+        }
+        memcpy(buf, src, size);
+        for (uint32_t i = 0; i < size / 4; ++i)
+            buf[i] = swap32by8(buf[i]);
+        if (fseek(g_MMU->m_hb_file, lba * 512, SEEK_SET) != 0 || fwrite(buf, size, 1, g_MMU->m_hb_file) != 1)
+        {
+            g_MMU->m_hb_status |= (1 << 5);
+            return;
+        }
+        free(buf);
+        break;
+    }
+    case 0x000C:
+    {
+        uint32_t lba = m_MemLookupValue.UW[0];
+        uint32_t size = g_MMU->m_hb_n_blocks * 512;
+        g_MMU->m_hb_status &= ~(0b1111 << 5);
+        if (!g_MMU->m_hb_file ||
+            g_MMU->m_hb_dram_addr >= g_MMU->RdramSize() ||
+            g_MMU->m_hb_dram_addr + size > g_MMU->RdramSize())
+        {
+            g_MMU->m_hb_status |= (1 << 5);
+            return;
+        }
+        uint32_t * dst = (uint32_t *)(g_MMU->Rdram() + g_MMU->m_hb_dram_addr);
+        if (fseek(g_MMU->m_hb_file, lba * 512, SEEK_SET) != 0 || fread(dst, size, 1, g_MMU->m_hb_file) != 1)
+        {
+            g_MMU->m_hb_status |= (1 << 5);
+            return;
+        }
+        for (uint32_t i = 0; i < size / 4; ++i)
+            dst[i] = swap32by8(dst[i]);
+        break;
+    }
+    case 0x0010: g_MMU->m_hb_n_blocks = m_MemLookupValue.UW[0]; break;
+    case 0x0014:
+    {
+        if (m_MemLookupValue.UW[0] & (0b1 << 4))
+        {
+            g_MMU->m_hb_status &= ~((0b1 << 0) | (0b1 << 2) | (0b1 << 3) | (0b1111 << 5));
+            if (g_MMU->m_hb_file)
+                fclose(g_MMU->m_hb_file);
+            if (!CN64SystemSettings::bSDEnable())
+                return;
+            g_MMU->m_hb_file = fopen(CN64SystemSettings::sSDPath().c_str(), "r+b");
+            if (!g_MMU->m_hb_file)
+            {
+                g_MMU->m_hb_status |= (1 << 5);
+                return;
+            }
+            g_MMU->m_hb_status |= (1 << 0) | (1 << 2) | (1 << 3);
+        }
+        break;
+    }
     }
 }
 

@@ -285,7 +285,11 @@
 #define IDC_CMD_LIST                    1113
 #define IDC_ROMSEL_TEXT4                1114
 #define IDC_R1_EDIT                     1114
+#define IDC_ENABLESD                    1115
+#define IDC_SDPATH_TXT                  1116
 #define IDC_GO_BTN                      1116
+#define IDC_SDPATH                      1117
+#define IDC_SELECT_SDPATH               1118
 #define IDC_UNMARK                      1119
 #define IDC_STEP_BTN                    1119
 #define IDC_ADDSYMBOL_BTN               1119

@@ -238,6 +238,10 @@ enum SettingID
     RomList_7zipCache,
     RomList_7zipCacheDefault,
 
+    //SD Card
+    SDCard_Enable,
+    SDCard_Path,
+
     //File Info
     File_DiskIPLPath,
     File_DiskIPLUSAPath,

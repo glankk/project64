@@ -44,9 +44,13 @@ bool CSettingTypeRDBRDRamSize::Load (uint32_t Index, uint32_t & Value ) const
     {
         LoadDefault(Index,ulValue);
     }
-    Value = 0x400000;
-    if (ulValue == 8 || ulValue == 0x800000 || !existsInRdb) //default to 8MB if ROM is not in the RDB
+    if (existsInRdb)
     {
+        Value = ulValue << 20;
+    }
+    else
+    {
+        //default to 8MB if ROM is not in the RDB
         Value = 0x800000;
     }
     return bRes;
@@ -82,7 +86,7 @@ void CSettingTypeRDBRDRamSize::Save (uint32_t /*Index*/, bool /*Value*/ )
 
 void CSettingTypeRDBRDRamSize::Save (uint32_t /*Index*/, uint32_t Value )
 {
-    m_SettingsIniFile->SaveNumber(m_SectionIdent->c_str(),m_KeyName.c_str(),Value == 0x800000 ? 8 : 4);
+    m_SettingsIniFile->SaveNumber(m_SectionIdent->c_str(),m_KeyName.c_str(),Value >> 20);
 }
 
 void CSettingTypeRDBRDRamSize::Save (uint32_t /*Index*/, const std::string & /*Value*/ )

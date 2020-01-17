@@ -23,6 +23,9 @@ class CGeneralOptionsPage :
 		COMMAND_ID_HANDLER_EX(IDC_BASIC_MODE,OnBasicMode)
 		COMMAND_HANDLER_EX(IDC_REMEMBER,EN_UPDATE,EditBoxChanged)
 		COMMAND_HANDLER_EX(IDC_REMEMBERDIR,EN_UPDATE,EditBoxChanged)
+		COMMAND_ID_HANDLER_EX(IDC_ENABLESD,CheckBoxChanged)
+		COMMAND_ID_HANDLER_EX(IDC_SELECT_SDPATH,SelectSDPath)
+		COMMAND_HANDLER_EX(IDC_SDPATH,EN_UPDATE,SDPathChanged)
 	END_MSG_MAP()
 
 	enum { IDD = IDD_Settings_General };
@@ -39,5 +42,12 @@ public:
 
 private:
 	void OnBasicMode ( UINT Code, int id, HWND ctl );
+	void SelectSDPath( UINT Code, int id, HWND ctl );
+	void SDPathChanged( UINT Code, int id, HWND ctl );
 	CSettingConfig * m_SettingsConfig;
+
+	void UpdatePageSettings(void);
+	CModifiedEditBox m_SDPath;
+
+	bool m_InUpdateSettings;
 };
